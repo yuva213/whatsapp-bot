@@ -33,13 +33,40 @@ export async function isSupabaseAvailable(): Promise<boolean> {
   try {
     const { error } = await client.from('whatsapp_auth_creds').select('session_id').limit(1)
     if (error && error.code !== 'PGRST116') {
-      // If table doesn't exist yet or connection failed
-      console.warn('[Supabase] Connection test returned error:', error.message)
       return false
     }
     return true
   } catch (err) {
-    console.warn('[Supabase] Connection failed:', (err as Error).message)
+    return false
+  }
+}
+
+export async function isSupabaseWriteAvailable(): Promise<boolean> {
+  const client = getSupabase()
+  if (!client) return false
+
+  try {
+    const testId = '__test_write_check__'
+    const { error } = await client
+      .from('whatsapp_auth_creds')
+      .upsert({ session_id: testId, creds: { test: true } })
+
+    if (error) {
+      if (error.code === '42501') {
+        console.warn(
+          '⚠️  [Supabase RLS Warning] Database write blocked by Row Level Security (RLS).'
+        )
+        console.warn(
+          '👉 Add SUPABASE_SERVICE_ROLE_KEY in .env OR run supabase/migrations/002_allow_rls_access.sql in Supabase SQL editor.'
+        )
+      }
+      return false
+    }
+
+    // Clean up test row
+    await client.from('whatsapp_auth_creds').delete().eq('session_id', testId)
+    return true
+  } catch {
     return false
   }
 }
