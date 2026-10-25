@@ -4,9 +4,13 @@
   "description": "WhatsApp Bot built with Baileys and integrated with Supabase for session management, message logging, and contact synchronization.",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "dev": "next dev",
+    "bot": "tsx watch src/index.ts",
+    "dev:bot": "tsx watch src/index.ts",
+    "build": "next build",
+    "build:bot": "tsc -p tsconfig.bot.json",
+    "start": "next start",
+    "start:bot": "node dist/index.js",
     "lint": "tsc --noEmit"
   },
   "keywords": [
