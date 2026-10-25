@@ -1,0 +1,7 @@
+name = "whatsapp-bot-cloudflare-ai"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+# Workers AI Binding
+[ai]
+binding = "AI"
