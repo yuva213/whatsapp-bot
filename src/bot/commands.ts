@@ -1,6 +1,7 @@
 import { WAMessage, WASocket } from '@whiskeysockets/baileys'
 import { config } from '../config/env.js'
 import { getSupabase } from '../database/supabase.js'
+import { CloudflareAIService } from '../services/cloudflare-ai.js'
 
 export interface CommandContext {
   sock: WASocket
@@ -45,7 +46,7 @@ registerCommand('help', 'Display list of available commands', '!help', async (ct
     message += `• *${config.commandPrefix}${cmd}*\n  _${details.description}_\n  Usage: \`${details.usage}\`\n\n`
   }
 
-  message += `_Built with Baileys & Supabase_`
+  message += `_Built with Baileys, Supabase & Cloudflare AI_`
   await ctx.sock.sendMessage(ctx.from, { text: message.trim() }, { quoted: ctx.msg })
 })
 
@@ -64,12 +65,19 @@ registerCommand('status', 'Show bot system and database status', '!status', asyn
     dbStatus = error ? `⚠️ Error: ${error.message}` : '✅ Connected & Active'
   }
 
+  const cfStatus = CloudflareAIService.isConfigured()
+    ? '✅ Configured & Ready'
+    : '⚠️ Missing API Token / Account ID'
+
   const text =
     `📊 *Bot System Status*\n\n` +
     `• *Bot Name:* ${config.botName}\n` +
     `• *Session ID:* ${config.sessionId}\n` +
     `• *Uptime:* ${uptimeStr}\n` +
     `• *Supabase Status:* ${dbStatus}\n` +
+    `• *Cloudflare AI:* ${cfStatus}\n` +
+    `• *Text Model:* \`${config.cloudflareTextModel}\`\n` +
+    `• *Image Model:* \`${config.cloudflareImageModel}\`\n` +
     `• *Node.js:* ${process.version}\n` +
     `• *Memory Usage:* ${Math.round(process.memoryUsage().rss / 1024 / 1024)} MB`
 
@@ -160,7 +168,98 @@ registerCommand(
   }
 )
 
-// 7. !info
+// 7. !ai / !ask <prompt> — Cloudflare Workers AI Text Generation
+async function handleAIText(ctx: CommandContext) {
+  const prompt = ctx.args.join(' ')
+  if (!prompt) {
+    await ctx.sock.sendMessage(
+      ctx.from,
+      { text: `⚠️ Please provide a prompt:\n\`${config.commandPrefix}ai Explain quantum computing in simple words\`` },
+      { quoted: ctx.msg }
+    )
+    return
+  }
+
+  try {
+    // Send typing presence
+    await ctx.sock.sendPresenceUpdate('composing', ctx.from)
+
+    const response = await CloudflareAIService.generateText(prompt)
+
+    const reply = `🤖 *AI Assistant* (${config.cloudflareTextModel.split('/').pop()}):\n\n${response}`
+    await ctx.sock.sendMessage(ctx.from, { text: reply }, { quoted: ctx.msg })
+  } catch (err) {
+    console.error('[AI] Text generation error:', err)
+    await ctx.sock.sendMessage(
+      ctx.from,
+      { text: `❌ *Cloudflare AI Error:*\n${(err as Error).message}` },
+      { quoted: ctx.msg }
+    )
+  }
+}
+registerCommand('ai', 'Generate text using Cloudflare Workers AI (Llama 3.1)', '!ai <prompt>', handleAIText)
+registerCommand('ask', 'Ask AI a question', '!ask <question>', handleAIText)
+
+// 8. !image / !draw / !imagine <prompt> — Cloudflare Workers AI Image Generation
+async function handleAIImage(ctx: CommandContext) {
+  const prompt = ctx.args.join(' ')
+  if (!prompt) {
+    await ctx.sock.sendMessage(
+      ctx.from,
+      { text: `⚠️ Please provide an image prompt:\n\`${config.commandPrefix}image A cyberpunk futuristic city with neon lights at night\`` },
+      { quoted: ctx.msg }
+    )
+    return
+  }
+
+  try {
+    // Notify user that generation is in progress
+    await ctx.sock.sendMessage(
+      ctx.from,
+      { text: `🎨 *Generating image with Cloudflare AI...*\nPrompt: _"${prompt}"_\nPlease wait a few seconds.` },
+      { quoted: ctx.msg }
+    )
+
+    // Call Cloudflare AI Image generation
+    const imageBuffer = await CloudflareAIService.generateImage(prompt)
+
+    // Send generated image
+    await ctx.sock.sendMessage(
+      ctx.from,
+      {
+        image: imageBuffer,
+        caption: `🎨 *Cloudflare AI Image*\n📝 Prompt: _${prompt}_\n⚡ Model: \`${config.cloudflareImageModel.split('/').pop()}\``
+      },
+      { quoted: ctx.msg }
+    )
+  } catch (err) {
+    console.error('[AI] Image generation error:', err)
+    await ctx.sock.sendMessage(
+      ctx.from,
+      { text: `❌ *Image Generation Error:*\n${(err as Error).message}` },
+      { quoted: ctx.msg }
+    )
+  }
+}
+registerCommand('image', 'Generate an image using Cloudflare Workers AI (SDXL / Flux)', '!image <prompt>', handleAIImage)
+registerCommand('draw', 'Generate an image', '!draw <prompt>', handleAIImage)
+registerCommand('imagine', 'Generate an image', '!imagine <prompt>', handleAIImage)
+
+// 9. !models — View configured AI models
+registerCommand('models', 'List active Cloudflare AI models', '!models', async (ctx) => {
+  const text =
+    `⚡ *Cloudflare Workers AI Models*\n\n` +
+    `• *Text Model:* \`${config.cloudflareTextModel}\`\n` +
+    `  _Free, high-speed Llama 3.1 8B Instruct_\n\n` +
+    `• *Image Model:* \`${config.cloudflareImageModel}\`\n` +
+    `  _Free, photorealistic Stable Diffusion XL_\n\n` +
+    `• *Worker URL:* ${config.cloudflareWorkerUrl || 'Direct REST API'}\n` +
+    `• *Account Configured:* ${config.cloudflareAccountId ? 'Yes' : 'No'}`
+
+  await ctx.sock.sendMessage(ctx.from, { text }, { quoted: ctx.msg })
+})
+
+// 10. !info
 registerCommand('info', 'Show sender & chat info', '!info', async (ctx) => {
   const text =
     `👤 *Your Profile Info*\n\n` +
