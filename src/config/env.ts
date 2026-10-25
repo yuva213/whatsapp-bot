@@ -19,8 +19,12 @@ export const config: Config = {
   sessionId: process.env.SESSION_ID || 'default_session',
   usePairingCode: process.env.USE_PAIRING_CODE === 'true',
   phoneNumber: process.env.PHONE_NUMBER?.replace(/\D/g, '') || '',
-  supabaseUrl: process.env.SUPABASE_URL || undefined,
-  supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || undefined,
+  supabaseUrl: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || undefined,
+  supabaseKey:
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    undefined,
   commandPrefix: process.env.COMMAND_PREFIX || '!',
   logLevel: (process.env.LOG_LEVEL as Config['logLevel']) || 'info',
   syncFullHistory: process.env.SYNC_FULL_HISTORY === 'true'
