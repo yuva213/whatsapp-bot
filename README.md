@@ -1,14 +1,15 @@
-# KotlerX WhatsApp Bot (Baileys + Supabase)
+# KotlerX WhatsApp Bot & Supabase Command Center
 
-A high-performance WhatsApp bot built using [Baileys](https://baileys.wiki) and integrated with [Supabase](https://supabase.com) for production session persistence, full message logging, and contact synchronization.
+A high-performance WhatsApp bot built using [Baileys](https://baileys.wiki) and integrated with [Supabase](https://supabase.com) for production session persistence, full message logging, and contact synchronization — featuring a sleek **Next.js Web Dashboard**.
 
 ---
 
 ## ✨ Features
 
 - **Direct WebSocket Protocol**: Connects to WhatsApp Web API directly over WebSockets with zero browser/Chromium/Selenium overhead.
+- **Next.js Web Dashboard**: Real-time browser command center powered by `@supabase/ssr` to view message feeds, contact directories, and bot health stats.
 - **Supabase-Backed Authentication**: Signal Protocol keys and auth credentials are automatically serialized with `BufferJSON` and stored in Supabase PostgreSQL tables.
-- **Graceful Fallback**: If Supabase credentials are not provided or connection fails, automatically falls back to local file-based storage (`auth_info_*`) without crashing.
+- **Graceful Fallback**: If Supabase credentials are missing or connection fails, automatically falls back to local file-based storage (`auth_info_*`) without crashing.
 - **QR Code & Pairing Code Modes**: Supports both terminal QR code scanning (`qrcode-terminal`) and 8-digit pairing code generation for headless servers.
 - **Full Message Logging**: Logs real-time messages, media attachments, delivery receipts, and read receipts into Supabase `whatsapp_messages`.
 - **Contact & Chat Sync**: Automatically synchronizes your WhatsApp contacts and active chats into Supabase with batch upserts.
@@ -28,7 +29,16 @@ A high-performance WhatsApp bot built using [Baileys](https://baileys.wiki) and 
 
 ```text
 whatsapp-bot/
-├── src/
+├── app/                         # Next.js App Router Web Dashboard
+│   ├── globals.css              # Glassmorphic dark theme with WhatsApp emerald palette
+│   ├── layout.tsx               # Root layout & typography
+│   └── page.tsx                 # Live monitoring dashboard with Supabase SSR
+├── utils/
+│   └── supabase/                # Next.js Supabase helpers
+│       ├── client.ts            # Browser client (@supabase/ssr)
+│       ├── middleware.ts        # Session refresh middleware
+│       └── server.ts            # Server-side client (cookies())
+├── src/                         # WhatsApp Bot Backend (Baileys)
 │   ├── bot/
 │   │   └── commands.ts          # Interactive command registry & handlers
 │   ├── config/
@@ -45,7 +55,9 @@ whatsapp-bot/
 ├── supabase/
 │   └── migrations/
 │       └── 001_whatsapp_bot_init.sql  # Database schema & triggers
-├── .env.example                 # Template for environment variables
+├── middleware.ts                # Next.js request routing middleware
+├── .env                         # Bot and Supabase credentials
+├── .env.local                   # Next.js local environment variables
 ├── package.json
 └── tsconfig.json
 ```
@@ -56,88 +68,50 @@ whatsapp-bot/
 
 ### 1. Prerequisites
 - **Node.js**: v18 or higher (tested on Node.js v24)
-- **Supabase Account**: A free project on [supabase.com](https://supabase.com)
+- **Supabase Account**: Connected to `https://ytledgcmvsdjyezkdopb.supabase.co`
 - **WhatsApp Account**: WhatsApp installed on your mobile phone
 
-### 2. Set Up Database Schema in Supabase
+### 2. Environment Variables
 
-Open your Supabase project dashboard, navigate to the **SQL Editor**, and execute the migration file located at:
-[`supabase/migrations/001_whatsapp_bot_init.sql`](supabase/migrations/001_whatsapp_bot_init.sql)
-
-This creates the following tables:
-- `whatsapp_auth_creds`: WhatsApp credentials & registration metadata
-- `whatsapp_auth_keys`: Signal Protocol session encryption keys
-- `whatsapp_contacts`: Synced WhatsApp contacts (names, phones, profile pictures)
-- `whatsapp_chats`: Synced chats and unread counts
-- `whatsapp_messages`: Logged incoming/outgoing messages and status updates
-
-### 3. Configure Environment Variables
-
-Copy `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your project settings:
+Your `.env` and `.env.local` files are configured:
 
 ```env
-# Bot Configuration
-BOT_NAME="KotlerX WhatsApp Bot"
-SESSION_ID="default_session"
-
-# Authentication Method: Set to true to use an 8-digit phone pairing code instead of scanning QR
-USE_PAIRING_CODE=false
-PHONE_NUMBER="919876543210" # Country code + number (no +, spaces, or dashes)
-
-# Supabase Credentials
-SUPABASE_URL="https://your-project.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key" # Recommended for backend bot
-
-# Bot Settings
-COMMAND_PREFIX="!"
-LOG_LEVEL="info" # 'silent' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
-SYNC_FULL_HISTORY=false
+NEXT_PUBLIC_SUPABASE_URL=https://ytledgcmvsdjyezkdopb.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_qSLELzU5RkeHvbeG3RcJ0Q_kNlQ32S9
+SUPABASE_URL=https://ytledgcmvsdjyezkdopb.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_qSLELzU5RkeHvbeG3RcJ0Q_kNlQ32S9
 ```
 
-### 4. Run the Bot
+### 3. Available Scripts
 
-**Development mode (with hot-reload):**
-```bash
-npm run dev
-```
-
-**Production build & run:**
-```bash
-npm run build
-npm start
-```
-
-### 5. Pair WhatsApp
-
-#### Option A: QR Code (Default)
-When prompted, scan the QR code displayed in the terminal using your phone:
-> **WhatsApp → Settings → Linked Devices → Link a Device**
-
-#### Option B: Pairing Code
-Set `USE_PAIRING_CODE=true` in `.env`. The bot will display an 8-digit pairing code:
-> **WhatsApp → Settings → Linked Devices → Link a Device → Link with phone number instead**
+| Command | Description |
+|---|---|
+| `npm run dev` | Launch the **Next.js Web Dashboard** at [http://localhost:3000](http://localhost:3000) |
+| `npm run bot` | Launch the **WhatsApp Bot** (connects to WhatsApp Web & syncs to Supabase) |
+| `npm run build` | Build the Next.js production web application |
+| `npm run build:bot` | Build the standalone TypeScript bot backend into `./dist` |
+| `npm run lint` | Run TypeScript type checks across the entire project |
 
 ---
 
-## 🛠️ Adding Custom Commands
+## 📱 Running the Bot & Dashboard
 
-New commands can easily be registered in [`src/bot/commands.ts`](src/bot/commands.ts) using `registerCommand`:
+1. **Start the Web Dashboard**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-```typescript
-registerCommand('hello', 'Say hello to the bot', '!hello', async (ctx) => {
-  await ctx.sock.sendMessage(
-    ctx.from,
-    { text: `Hello ${ctx.pushName}! 👋` },
-    { quoted: ctx.msg }
-  )
-})
-```
+2. **In a second terminal, start the WhatsApp Bot**:
+   ```bash
+   npm run bot
+   ```
+   Scan the terminal QR code using WhatsApp on your phone (**Linked Devices → Link a Device**).
+
+3. Once connected:
+   - Your messages, contacts, and active chats will stream directly into Supabase.
+   - The Next.js dashboard will display your live metrics, message feed, and contact list in real time!
+   - Test commands in any WhatsApp chat: `!ping`, `!status`, `!help`, `!echo hello`, `!stats`.
 
 ---
 
