@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "WhatsApp Bot built with Baileys and integrated with Supabase for session management, message logging, and contact synchronization.",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "bot": "tsx watch src/index.ts",
