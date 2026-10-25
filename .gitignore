@@ -1,1 +1,14 @@
+# Dependencies
+node_modules/
+dist/
+
+# Environment Variables
+.env
+.env.local
+
+# WhatsApp local session cache
+auth_info*/
+*.log
+
+# Scripts
 a.ps1
