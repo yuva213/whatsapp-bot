@@ -12,7 +12,8 @@
     "build:bot": "tsc -p tsconfig.bot.json",
     "start": "next start",
     "start:bot": "node dist/index.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "postinstall": "node scripts/patch-rust-bridge.js"
   },
   "keywords": [
     "whatsapp",
