@@ -7,7 +7,7 @@ import {
   SignalDataSet,
   useMultiFileAuthState
 } from '@whiskeysockets/baileys'
-import { getSupabase, isSupabaseAvailable } from './supabase.js'
+import { getSupabase, isSupabaseWriteAvailable } from './supabase.js'
 
 export interface SupabaseAuthStateResult {
   state: AuthenticationState
@@ -19,11 +19,11 @@ export async function useSupabaseAuthState(
   sessionId: string = 'default_session'
 ): Promise<SupabaseAuthStateResult> {
   const supabase = getSupabase()
-  const dbAvailable = await isSupabaseAvailable()
+  const canWrite = await isSupabaseWriteAvailable()
 
-  if (!supabase || !dbAvailable) {
-    console.warn(
-      `[AuthStore] Supabase is not reachable or tables are missing. Falling back to local file storage: auth_info_${sessionId}`
+  if (!supabase || !canWrite) {
+    console.log(
+      `📁 [AuthStore] Using fast local file session storage: auth_info_${sessionId}`
     )
     const fileAuth = await useMultiFileAuthState(`auth_info_${sessionId}`)
     return {
