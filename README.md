@@ -25,7 +25,7 @@ A high-performance WhatsApp bot built using [Baileys](https://baileys.wiki) and 
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Structure 
 
 ```text
 whatsapp-bot/
